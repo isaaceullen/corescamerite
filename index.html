@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Gerenciador de Cores — Hex Cards</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --panel:#151925;
+    --soft:#1c2130;
+    --muted:#9aa3b2;
+    --text:#e6e9ef;
+    --brand:#7B48EA;
+    --accent:#2f80ed;
+    --danger:#ef4444;
+    --success:#22c55e;
+    --warning:#f59e0b;
+    --radius:14px;
+    --shadow:0 6px 24px rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:linear-gradient(180deg,#0d1017, #0f1115 60%, #0f1115);
+    color:var(--text); font:500 15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Inter,Arial;
+  }
+  a{color:inherit;text-decoration:none}
+  .container{max-width:1200px;margin:0 auto;padding:20px}
+  header{
+    position:sticky; top:0; z-index:50;
+    backdrop-filter: saturate(120%) blur(10px);
+    background:linear-gradient(180deg,rgba(10,12,18,.9),rgba(10,12,18,.65));
+    border-bottom:1px solid #1e2332;
+  }
+  .nav{
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+    padding:14px 20px;
+  }
+  .tabs{display:flex;gap:8px;align-items:center}
+  .tab{
+    padding:10px 14px; border-radius:10px; background:var(--panel);
+    border:1px solid #22283a; cursor:pointer; transition:.18s;
+  }
+  .tab.active{background:#1b2132;border-color:#2a334b; box-shadow: inset 0 0 0 1px #2f3853}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--brand);box-shadow:0 0 16px var(--brand)}
+  .search-wrap{flex:1;display:flex;gap:8px;max-width:520px;margin:0 12px}
+  .input{
+    width:100%;background:var(--panel);border:1px solid #22283a;color:var(--text);
+    padding:10px 12px;border-radius:10px; outline:none; transition:border .2s;
+  }
+  .input:focus{border-color:#2f80ed}
+  .btn{
+    background:linear-gradient(180deg,#2a3150,#232a42);
+    border:1px solid #303a5a; color:#e8ecf8; padding:10px 14px; border-radius:10px; cursor:pointer;
+  }
+  .btn.primary{background:linear-gradient(180deg,#7B48EA,#6935e6); border-color:#7B48EA}
+  .btn.ghost{background:var(--panel)}
+  .btn.small{padding:6px 10px;font-size:13px}
+  .badge{font-size:12px;color:#b8c0d0;background:#1a2031;border:1px solid #28314a;padding:4px 8px;border-radius:999px}
+
+  /* Páginas */
+  .page{display:none;padding:20px}
+  .page.active{display:block}
+
+  /* Form de Adicionar */
+  .card{
+    background:var(--panel); border:1px solid #21283b; border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .form{display:grid;grid-template-columns:repeat(12,1fr); gap:14px; padding:18px}
+  .form .field{grid-column:span 6}
+  .form .field.full{grid-column:1/-1}
+  .label{font-size:13px;color:#c3cadd;margin-bottom:6px;display:block}
+  .row{display:flex;gap:10px}
+  .color-preview{
+    width:52px;height:52px;border-radius:12px;border:1px solid rgba(255,255,255,.1);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+  }
+  .helper{font-size:12px;color:#9aa3b2;margin-top:6px}
+  .grid2{display:grid;grid-template-columns:1fr auto; gap:10px}
+
+  /* Lista de Categorias + Cards */
+  .categories{
+    display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .category{
+    width:360px; min-width:300px; flex:1 1 320px;
+    background:var(--panel); border:1px solid #21283b; border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+  .cat-header{
+    display:flex;align-items:center;justify-content:space-between; gap:10px;
+    padding:14px 16px; border-bottom:1px solid #21283b;
+    cursor:grab; user-select:none;
+  }
+  .cat-title{display:flex;align-items:center;gap:8px}
+  .cat-body{padding:14px; min-height:120px}
+  .cat-placeholder{
+    border:2px dashed #2d3756; border-radius:var(--radius); height:56px; margin:6px 0;
+  }
+
+  /* Card da cor */
+  .color-card{
+    display:flex; gap:12px; padding:10px; border-radius:12px;
+    border:1px solid #24304b; background:#131a2a; align-items:center;
+    margin:8px 0; cursor:grab; user-select:none; transition:transform .06s;
+  }
+  .color-card.dragging{opacity:.6; transform:scale(.98)}
+  .swatch{
+    width:48px; height:48px; border-radius:10px; border:1px solid rgba(255,255,255,.15);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); cursor:pointer;
+  }
+  .meta{flex:1; min-width:0}
+  .meta .name{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .meta .code{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size:13px;color:#b6c1d9; cursor:pointer}
+  .meta .cat{font-size:12px;color:#8f99af}
+  .actions{display:flex;gap:6px}
+  .btn.edit{border-color:#3a4a7a}
+  .btn.delete{border-color:#4a3040;background:linear-gradient(180deg,#3a1f25,#2b141a); color:#f2b1b1}
+
+  .empty{
+    text-align:center;color:#93a0b9;background:#121829;border:1px dashed #2a3552;border-radius:12px;padding:24px
+  }
+
+  /* Toast */
+  .toast{
+    position:fixed; left:50%; transform:translateX(-50%); bottom:24px;
+    background:#10182a; border:1px solid #223055; color:#e8f0ff; padding:10px 14px; border-radius:12px;
+    box-shadow:var(--shadow); opacity:0; pointer-events:none; transition:.25s;
+  }
+  .toast.show{opacity:1; pointer-events:auto; bottom:30px}
+
+  /* Modal simples para editar */
+  .overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center;
+  }
+  .overlay.show{display:flex}
+  .modal{
+    width:100%; max-width:520px; background:var(--panel); border:1px solid #21283b; border-radius:16px; box-shadow:var(--shadow)
+  }
+  .modal .head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #21283b}
+  .modal .content{padding:16px}
+  .close{cursor:pointer;font-size:22px; line-height:1}
+
+  /* DnD visual */
+  .drop-target{outline:2px dashed #3550aa; outline-offset:6px; border-radius:12px}
+  .cat-drag{outline:2px dashed #7B48EA; outline-offset:6px}
+  .highlight{box-shadow:0 0 0 2px #2f80ed inset}
+
+  @media (max-width:720px){
+    .search-wrap{max-width:none}
+    .form{grid-template-columns:1fr}
+    .form .field{grid-column:1/-1}
+    .categories{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="nav container">
+    <div class="brand"><span class="dot"></span> <span>Hex Cards</span> <span class="badge">LocalStorage</span></div>
+    <div class="search-wrap">
+      <input id="searchInput" class="input" type="search" placeholder="Buscar por nome ou categoria… (ex.: 'azul' ou 'UI')">
+      <button id="clearSearch" class="btn ghost" title="Limpar busca">Limpar</button>
+    </div>
+    <div class="tabs">
+      <button class="tab" data-route="#all">Todas as Cores</button>
+      <button class="tab" data-route="#add">Adicionar Cor</button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- Página: Todas as cores -->
+  <section id="page-all" class="page active">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:12px 2px 16px">
+      <div style="opacity:.9">Arraste <b>categorias</b> pelo cabeçalho · Arraste <b>cores</b> pelos cards</div>
+      <div class="badge" id="statsBadge">0 categorias · 0 cores</div>
+    </div>
+    <div id="categoriesWrap" class="categories"></div>
+    <div id="emptyAll" class="empty" style="display:none;margin-top:16px">
+      Nenhuma cor adicionada ainda. Vá em <b>Adicionar Cor</b> para começar.
+    </div>
+  </section>
+
+  <!-- Página: Adicionar -->
+  <section id="page-add" class="page">
+    <div class="card">
+      <form id="addForm" class="form" autocomplete="off">
+        <div class="field full">
+          <div style="display:flex;align-items:center;gap:10px">
+            <h3 style="margin:0;font-size:18px">Adicionar nova cor</h3>
+            <span class="badge">Código sem #</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="name">Nome</label>
+          <input id="name" class="input" type="text" placeholder="Ex.: Roxo Primário" required>
+        </div>
+
+        <div class="field">
+          <label class="label" for="hex">Código Hex (sem #)</label>
+          <div class="grid2">
+            <input id="hex" class="input" type="text" placeholder="Ex.: 7B48EA" required>
+            <div id="preview" class="color-preview" title="Prévia"></div>
+          </div>
+          <div class="helper">Aceita 3 ou 6 dígitos. Se você colar com “#”, nós removemos.</div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="category">Categoria</label>
+          <input id="category" class="input" type="text" list="catList" placeholder="Ex.: UI / Brand / Alerts" required>
+          <datalist id="catList"></datalist>
+        </div>
+
+        <div class="field">
+          <label class="label" for="altCat">Ou escolha existente</label>
+          <select id="altCat" class="input">
+            <option value="">— Selecionar —</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <div class="row">
+            <button class="btn primary" type="submit">Adicionar</button>
+            <button class="btn ghost" type="button" id="resetBtn">Limpar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div style="margin-top:16px" class="helper">Dica: use nomes consistentes e categorias curtas. Ex.: <i>Brand, UI, Alerts</i>.</div>
+  </section>
+</main>
+
+<!-- Modal Editar -->
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="modal">
+    <div class="head">
+      <strong>Editar cor</strong>
+      <span id="closeModal" class="close" aria-label="Fechar">×</span>
+    </div>
+    <div class="content">
+      <form id="editForm" class="form" autocomplete="off" style="padding:0">
+        <input type="hidden" id="editId">
+        <div class="field">
+          <label class="label" for="editName">Nome</label>
+          <input id="editName" class="input" type="text" required>
+        </div>
+        <div class="field">
+          <label class="label" for="editHex">Hex (sem #)</label>
+          <div class="grid2">
+            <input id="editHex" class="input" type="text" required>
+            <div id="editPreview" class="color-preview"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="editCat">Categoria</label>
+          <input id="editCat" class="input" type="text" list="catList">
+        </div>
+        <div class="field full">
+          <div class="row">
+            <button class="btn primary" type="submit">Salvar</button>
+            <button class="btn" type="button" id="cancelEdit">Cancelar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast">Copiado!</div>
+
+<script>
+/* ==========================
+   Utilidades & Persistência
+   ========================== */
+const LS_KEYS = { colors: 'hexcards.colors', categories: 'hexcards.categories' };
+
+function uid(){ return Math.random().toString(36).slice(2,9) }
+
+function load(key, fallback){
+  try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }
+  catch{ return fallback }
+}
+function save(key, value){
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+function getState(){
+  const colors = load(LS_KEYS.colors, []);
+  const categories = load(LS_KEYS.categories, []); // [{id,name,order}]
+  return { colors, categories };
+}
+
+function setState(next){
+  if(next.colors) save(LS_KEYS.colors, next.colors);
+  if(next.categories) save(LS_KEYS.categories, next.categories);
+}
+
+/* Normaliza HEX: tira #, remove espaços, uppercase, valida 3/6 dígitos */
+function normHex(raw){
+  if(!raw) return null;
+  let h = String(raw).trim();
+  if(h.startsWith('#')) h = h.slice(1);
+  h = h.replace(/[^0-9a-fA-F]/g,'').toUpperCase();
+  if(/^([0-9A-F]{3}|[0-9A-F]{6})$/.test(h)){
+    if(h.length===3){ // Expande 3 dígitos para 6
+      h = h.split('').map(c=>c+c).join('');
+    }
+    return h;
+  }
+  return null;
+}
+
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 1400);
+}
+
+/* ==========================
+   Router simples (SPA)
+   ========================== */
+const tabs = document.querySelectorAll('.tab');
+function setRoute(hash){
+  const target = hash || '#all';
+  tabs.forEach(t => t.classList.toggle('active', t.dataset.route===target));
+  document.getElementById('page-all').classList.toggle('active', target==='#all');
+  document.getElementById('page-add').classList.toggle('active', target==='#add');
+  location.hash = target;
+}
+tabs.forEach(t => t.addEventListener('click', ()=> setRoute(t.dataset.route)));
+window.addEventListener('hashchange', ()=> setRoute(location.hash));
+setRoute(location.hash || '#all');
+
+/* ==========================
+   Renderização
+   ========================== */
+const categoriesWrap = document.getElementById('categoriesWrap');
+const emptyAll = document.getElementById('emptyAll');
+const statsBadge = document.getElementById('statsBadge');
+const catList = document.getElementById('catList');
+const altCat = document.getElementById('altCat');
+
+function ensureCategory(name){
+  const st = getState();
+  const existing = st.categories.find(c => c.name.toLowerCase()===name.toLowerCase());
+  if(existing) return existing;
+  const order = (st.categories.length ? Math.max(...st.categories.map(c=>c.order||0))+1 : 1);
+  const cat = { id: uid(), name, order };
+  st.categories.push(cat);
+  setState(st);
+  return cat;
+}
+
+function sortCategories(cats){ return [...cats].sort((a,b)=> (a.order||0)-(b.order||0) || a.name.localeCompare(b.name)) }
+function colorsByCat(catId, searchTerm){
+  const st = getState();
+  let col = st.colors.filter(c => c.categoryId===catId);
+  // busca aplicada aqui (apenas em page-all)
+  if(searchTerm){
+    const s = searchTerm.toLowerCase();
+    col = col.filter(c => (c.name||'').toLowerCase().includes(s) || (getCatName(c.categoryId)||'').toLowerCase().includes(s));
+  }
+  // ordenar por position ou por nome
+  col.sort((a,b)=>{
+    const pa = (a.position ?? 0), pb = (b.position ?? 0);
+    if(pa!==pb) return pa-pb;
+    return (a.name||'').localeCompare(b.name||'');
+  });
+  return col;
+}
+function getCatName(id){
+  const st = getState();
+  return st.categories.find(c=>c.id===id)?.name || '';
+}
+
+function populateCatInputs(){
+  const { categories } = getState();
+  const s = sortCategories(categories);
+  // datalist
+  catList.innerHTML = s.map(c=> `<option value="${c.name}">`).join('');
+  // select alternativo
+  altCat.innerHTML = `<option value="">— Selecionar —</option>` + s.map(c=> `<option value="${c.name}">${c.name}</option>`).join('');
+}
+
+function renderAll(){
+  const st = getState();
+  populateCatInputs();
+
+  const term = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+
+  // Quando não há nenhuma cor: mostra vazio
+  const totalColors = st.colors.length;
+  const totalCats = st.categories.length || (totalColors ? new Set(st.colors.map(c=>c.categoryId)).size : 0);
+  statsBadge.textContent = `${totalCats} categorias · ${totalColors} cores`;
+  emptyAll.style.display = totalColors ? 'none' : 'block';
+
+  // Se existir cor sem categoria salva (fallback), cria uma genérica
+  st.colors.forEach(c=>{
+    if(!st.categories.some(k=>k.id===c.categoryId)){
+      const fallback = ensureCategory('Sem categoria');
+      c.categoryId = fallback.id;
+    }
+  });
+  setState(st);
+
+  // Render categorias
+  const cats = sortCategories(getState().categories);
+  categoriesWrap.innerHTML = '';
+  cats.forEach(cat=>{
+    // Filtro por categoria via busca
+    const catMatches = !term || cat.name.toLowerCase().includes(term);
+    const col = colorsByCat(cat.id, term);
+    if(!catMatches && col.length===0){ return; } // não mostra cat que não bate busca e sem filhos que batem
+
+    const section = document.createElement('section');
+    section.className = 'category';
+    section.draggable = true;
+    section.dataset.catId = cat.id;
+
+    const header = document.createElement('div');
+    header.className = 'cat-header';
+    header.innerHTML = `
+      <div class="cat-title">
+        <span class="badge">Categoria</span>
+        <strong>${cat.name}</strong>
+      </div>
+      <span class="badge">${col.length} cor(es)</span>
+    `;
+    section.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'cat-body';
+    body.dataset.catId = cat.id;
+    body.addEventListener('dragover', onCardDragOver);
+    body.addEventListener('drop', onCardDrop);
+    body.addEventListener('dragleave', e=> body.classList.remove('drop-target'));
+
+    if(col.length===0){
+      const placeholder = document.createElement('div');
+      placeholder.className = 'empty';
+      placeholder.textContent = 'Solte cores aqui';
+      body.appendChild(placeholder);
+    } else {
+      col.forEach(color=>{
+        body.appendChild(renderColorCard(color));
+      });
+    }
+
+    section.appendChild(body);
+    categoriesWrap.appendChild(section);
+
+    // DnD de categoria
+    header.addEventListener('dragstart', onCatDragStart);
+    section.addEventListener('dragover', onCatDragOver);
+    section.addEventListener('drop', onCatDrop);
+    section.addEventListener('dragend', onCatDragEnd);
+  });
+}
+
+function renderColorCard(color){
+  const el = document.createElement('div');
+  el.className = 'color-card';
+  el.draggable = true;
+  el.dataset.colorId = color.id;
+
+  const sw = document.createElement('div');
+  sw.className = 'swatch';
+  sw.style.background = `#${color.hex}`;
+  sw.title = 'Clique para copiar o código (sem #)';
+  sw.addEventListener('click', ()=> copyHex(color.hex));
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const name = document.createElement('div');
+  name.className = 'name';
+  name.textContent = color.name || '(sem nome)';
+  const code = document.createElement('div');
+  code.className = 'code';
+  code.textContent = color.hex;
+  code.title = 'Clique para copiar o código (sem #)';
+  code.addEventListener('click', ()=> copyHex(color.hex));
+  const cat = document.createElement('div');
+  cat.className = 'cat';
+  cat.textContent = getCatName(color.categoryId);
+
+  meta.appendChild(name);
+  meta.appendChild(code);
+  meta.appendChild(cat);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn small edit';
+  editBtn.textContent = 'Editar';
+  editBtn.addEventListener('click', ()=> openEdit(color.id));
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn small delete';
+  delBtn.textContent = 'Excluir';
+  delBtn.addEventListener('click', ()=> removeColor(color.id));
+
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
+
+  el.appendChild(sw);
+  el.appendChild(meta);
+  el.appendChild(actions);
+
+  // DnD listeners
+  el.addEventListener('dragstart', onCardDragStart);
+  el.addEventListener('dragend', onCardDragEnd);
+
+  return el;
+}
+
+/* ==========================
+   Copiar sem “#”
+   ========================== */
+async function copyHex(hexNoHash){
+  try{
+    await navigator.clipboard.writeText(hexNoHash);
+    showToast(`Copiado: ${hexNoHash}`);
+  }catch{
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = hexNoHash;
+    document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+    showToast(`Copiado: ${hexNoHash}`);
+  }
+}
+
+/* ==========================
+   Adicionar cores
+   ========================== */
+const addForm = document.getElementById('addForm');
+const nameInput = document.getElementById('name');
+const hexInput = document.getElementById('hex');
+const catInput = document.getElementById('category');
+const altCatSelect = document.getElementById('altCat');
+const preview = document.getElementById('preview');
+
+function updatePreview(){
+  const val = normHex(hexInput.value) || '000000';
+  preview.style.background = `#${val}`;
+}
+hexInput.addEventListener('input', updatePreview);
+updatePreview();
+
+altCatSelect.addEventListener('change', ()=>{
+  if(altCatSelect.value){
+    catInput.value = altCatSelect.value;
+  }
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  addForm.reset(); updatePreview();
+});
+
+addForm.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const name = nameInput.value.trim();
+  let hex = normHex(hexInput.value);
+  const catName = (catInput.value || altCatSelect.value || '').trim();
+  if(!name || !hex || !catName){
+    showToast('Preencha nome, hex e categoria.');
+    return;
+  }
+  const cat = ensureCategory(catName);
+  const st = getState();
+  const nextPos = (st.colors.filter(c=>c.categoryId===cat.id).length) + 1;
+  const color = { id: uid(), name, hex, categoryId: cat.id, position: nextPos };
+  st.colors.push(color);
+  setState(st);
+  addForm.reset(); updatePreview();
+  renderAll();
+  setRoute('#all');
+  showToast('Cor adicionada!');
+});
+
+/* ==========================
+   Editar / Excluir
+   ========================== */
+const overlay = document.getElementById('overlay');
+const closeModalBtn = document.getElementById('closeModal');
+const cancelEditBtn = document.getElementById('cancelEdit');
+const editForm = document.getElementById('editForm');
+const editId = document.getElementById('editId');
+const editName = document.getElementById('editName');
+const editHex = document.getElementById('editHex');
+const editCat = document.getElementById('editCat');
+const editPreview = document.getElementById('editPreview');
+
+function openEdit(id){
+  const st = getState();
+  const c = st.colors.find(x=>x.id===id);
+  if(!c) return;
+  editId.value = c.id;
+  editName.value = c.name || '';
+  editHex.value = c.hex || '';
+  editCat.value = getCatName(c.categoryId) || '';
+  editPreview.style.background = `#${c.hex}`;
+  overlay.classList.add('show');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+function closeEdit(){
+  overlay.classList.remove('show');
+  overlay.setAttribute('aria-hidden', 'true');
+}
+closeModalBtn.addEventListener('click', closeEdit);
+cancelEditBtn.addEventListener('click', closeEdit);
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeEdit(); });
+
+editHex.addEventListener('input', ()=> {
+  const v = normHex(editHex.value) || '000000';
+  editPreview.style.background = `#${v}`;
+});
+
+editForm.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const id = editId.value;
+  const st = getState();
+  const idx = st.colors.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const name = editName.value.trim();
+  const hex = normHex(editHex.value);
+  const catName = editCat.value.trim();
+  if(!name || !hex || !catName){
+    showToast('Preencha nome, hex e categoria.');
+    return;
+  }
+  const cat = ensureCategory(catName);
+  // Se mudou de categoria, joga para o fim da nova
+  if(st.colors[idx].categoryId !== cat.id){
+    const newPos = st.colors.filter(c=>c.categoryId===cat.id).length + 1;
+    st.colors[idx] = {...st.colors[idx], name, hex, categoryId: cat.id, position:newPos};
+  }else{
+    st.colors[idx] = {...st.colors[idx], name, hex};
+  }
+  setState(st);
+  closeEdit();
+  renderAll();
+  showToast('Cor atualizada.');
+});
+
+function removeColor(id){
+  const st = getState();
+  const col = st.colors.find(c=>c.id===id);
+  if(!col) return;
+  if(!confirm(`Excluir "${col.name}"?`)) return;
+  st.colors = st.colors.filter(c=>c.id!==id);
+  // Recompacta posições dentro da categoria
+  const same = st.colors.filter(c=>c.categoryId===col.categoryId)
+    .sort((a,b)=> (a.position??0)-(b.position??0))
+    .map((c,i)=> ({...c, position:i+1}));
+  st.colors = st.colors.filter(c=>c.categoryId!==col.categoryId).concat(same);
+  setState(st);
+  renderAll();
+  showToast('Excluído.');
+}
+
+/* ==========================
+   Busca
+   ========================== */
+const searchInput = document.getElementById('searchInput');
+const clearSearch = document.getElementById('clearSearch');
+searchInput.addEventListener('input', renderAll);
+clearSearch.addEventListener('click', ()=> { searchInput.value=''; renderAll(); });
+
+/* ==========================
+   Drag & Drop — Cards
+   ========================== */
+let draggingCardId = null;
+
+function onCardDragStart(e){
+  const card = e.currentTarget.closest('.color-card');
+  if(!card) return;
+  draggingCardId = card.dataset.colorId;
+  card.classList.add('dragging');
+  e.dataTransfer.setData('text/plain', draggingCardId);
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onCardDragEnd(e){
+  const card = e.currentTarget.closest('.color-card');
+  if(card) card.classList.remove('dragging');
+  draggingCardId = null;
+  document.querySelectorAll('.drop-target').forEach(el=> el.classList.remove('drop-target'));
+}
+
+function getDragAfterElement(container, y){
+  const els = [...container.querySelectorAll('.color-card:not(.dragging)')];
+  return els.reduce((closest, child)=>{
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height/2;
+    if(offset < 0 && offset > closest.offset){
+      return { offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
+}
+
+function onCardDragOver(e){
+  e.preventDefault();
+  const body = e.currentTarget;
+  body.classList.add('drop-target');
+
+  const after = getDragAfterElement(body, e.clientY);
+  const dragging = document.querySelector('.color-card.dragging');
+  if(!dragging) return;
+
+  if(after == null){
+    body.appendChild(dragging);
+  }else{
+    body.insertBefore(dragging, after);
+  }
+}
+
+function onCardDrop(e){
+  e.preventDefault();
+  const body = e.currentTarget;
+  body.classList.remove('drop-target');
+  const catId = body.dataset.catId;
+  const id = draggingCardId || e.dataTransfer.getData('text/plain');
+  if(!id) return;
+
+  // Recalcula posições conforme DOM
+  const st = getState();
+  const moved = st.colors.find(c=>c.id===id);
+  if(!moved) return;
+  moved.categoryId = catId;
+
+  // Recompacta todas as posições de todas as categorias conforme DOM atual
+  const allBodies = document.querySelectorAll('.cat-body');
+  allBodies.forEach(b=>{
+    const bCat = b.dataset.catId;
+    const ids = [...b.querySelectorAll('.color-card')].map(x=>x.dataset.colorId);
+    ids.forEach((cid, idx)=>{
+      const c = st.colors.find(cc=>cc.id===cid);
+      if(c){
+        c.categoryId = bCat;
+        c.position = idx + 1;
+      }
+    });
+  });
+
+  setState(st);
+  renderAll();
+}
+
+/* ==========================
+   Drag & Drop — Categorias
+   ========================== */
+let draggingCatId = null;
+
+function onCatDragStart(e){
+  const section = e.currentTarget.closest('.category');
+  draggingCatId = section.dataset.catId;
+  section.classList.add('cat-drag');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onCatDragOver(e){
+  e.preventDefault();
+  const over = e.currentTarget; // section.category
+  const dragging = document.querySelector('.category.cat-drag');
+  if(!dragging || over===dragging) return;
+
+  const rect = over.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height/2;
+  if(before){
+    categoriesWrap.insertBefore(dragging, over);
+  }else{
+    categoriesWrap.insertBefore(dragging, over.nextSibling);
+  }
+}
+
+function onCatDrop(e){
+  e.preventDefault();
+  // Atualiza ordem no estado conforme DOM
+  const st = getState();
+  const orderedIds = [...categoriesWrap.querySelectorAll('.category')].map(s=>s.dataset.catId);
+  orderedIds.forEach((id, idx)=>{
+    const c = st.categories.find(k=>k.id===id);
+    if(c) c.order = idx+1;
+  });
+  setState(st);
+}
+
+function onCatDragEnd(e){
+  const section = e.currentTarget;
+  section.classList.remove('cat-drag');
+  draggingCatId = null;
+}
+
+/* ==========================
+   Boot
+   ========================== */
+(function init(){
+  // Se não houver nenhuma categoria e cores, cria categorias de exemplo (opcional — comentado)
+  // const st = getState(); if(st.categories.length===0){ ['Brand','UI','Alerts'].forEach(n => ensureCategory(n)); }
+
+  renderAll();
+  populateCatInputs();
+})();
+
+/* ==========================
+   Atalhos e UX
+   ========================== */
+// Copiar com duplo clique no card inteiro
+document.addEventListener('dblclick', (e)=>{
+  const card = e.target.closest('.color-card');
+  if(card){
+    const st = getState();
+    const c = st.colors.find(x=>x.id===card.dataset.colorId);
+    if(c) copyHex(c.hex);
+  }
+});
+
+// Enter no campo HEX preenche preview automaticamente (já faz oninput)
+// Limitar caracteres permitidos ao digitar HEX
+function allowHexInput(input){
+  input.addEventListener('input', ()=>{
+    const raw = input.value.trim().replace(/^#/,'').toUpperCase();
+    input.value = raw.replace(/[^0-9A-F]/g,'').slice(0,6);
+  });
+}
+allowHexInput(hexInput);
+allowHexInput(editHex);
+
+</script>
+</body>
+</html>
