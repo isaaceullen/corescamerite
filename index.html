@@ -11,7 +11,7 @@
     --soft:#1c2130;
     --muted:#9aa3b2;
     --text:#e6e9ef;
-    --brand:#7B48EA;
+    --brand:#7B48EA; /* Roxo principal Camerite */
     --accent:#2f80ed;
     --danger:#ef4444;
     --success:#22c55e;
@@ -804,11 +804,64 @@ function onCatDragEnd(e){
 }
 
 /* ==========================
+   Seed de cores padrão Camerite
+   ========================== */
+function seedCameriteDefaults(){
+  const st = getState();
+  if (st.colors.length > 0 || st.categories.length > 0) return;
+
+  // Cria categorias na ordem desejada
+  const catNames = ["Primária","Neutras","Secundária","Especiais"];
+  const categories = catNames.map((name, i)=>({ id: uid(), name, order: i+1 }));
+  const catId = Object.fromEntries(categories.map(c => [c.name, c.id]));
+
+  // Controle de posição por categoria
+  const positions = { "Primária":0, "Neutras":0, "Secundária":0, "Especiais":0 };
+  const add = (name, hex, catName) => ({
+    id: uid(),
+    name,
+    hex,
+    categoryId: catId[catName],
+    position: (++positions[catName])
+  });
+
+  // Paleta Camerite (conforme solicitado)
+  const colors = [
+    // Primária
+    add("Roxo Principal","7B48EA","Primária"),
+    add("Roxo Secundário","A785F1","Primária"),
+    add("Roxo Claro","D3C2F8","Primária"),
+
+    // Neutras
+    add("Preto","000000","Neutras"),
+    add("Branco","FFFFFF","Neutras"),
+    add("Cinza","CCCCD6","Neutras"),
+
+    // Secundária
+    add("Roxo","52396C","Secundária"),
+    add("Roxo Plataforma","3E2475","Secundária"),
+    add("Roxo Escuro","29184E","Secundária"),
+
+    // Especiais
+    add("Azul Claro","33CCF0","Especiais"),
+    add("Azul Escuro","0080D9","Especiais"),
+    add("Verde Claro","5CE6AC","Especiais"),
+    add("Verde Escuro","40D979","Especiais"),
+    add("Amarelo Claro","FFE466","Especiais"),
+    add("Amarelo Escuro","8C824D","Especiais"),
+    add("Vermelho Claro","FF7373","Especiais"),
+    add("Vermelho Escuro","803333","Especiais"),
+  ];
+
+  setState({ categories, colors });
+}
+
+/* ==========================
    Boot
    ========================== */
 (function init(){
-  // Se não houver nenhuma categoria e cores, cria categorias de exemplo (opcional — comentado)
-  // const st = getState(); if(st.categories.length===0){ ['Brand','UI','Alerts'].forEach(n => ensureCategory(n)); }
+  // Preenche automaticamente a paleta Camerite se não houver dados
+  seedCameriteDefaults();
 
   renderAll();
   populateCatInputs();
